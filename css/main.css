@@ -35,11 +35,12 @@
    1. IMPORT GOOGLE FONTS
    ========================================================================== */
 @import url("https://fonts.googleapis.com/css?family=Poppins:400,700");
+@import url('https://fonts.googleapis.com/css2?family=Tajawal&display=swap');
 /* ==========================================================================
    2. GENERAL
    ========================================================================== */
 body {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Tajawal', sans-serif;
   color: #333;
   font-size: 14px;
   font-weight: 400;
@@ -69,7 +70,7 @@ a {
 }
 
 h1, h2, h3, h4, h5 {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Tajawal', sans-serif;
   font-size: 40px;
   font-weight: 700;
   letter-spacing: 1px;
