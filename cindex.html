@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مسابقة القرآن والسنة</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        .title-font {
+            font-family: 'Amiri', serif;
+        }
+        
+        :root {
+            --gold: #D4AF37;
+            --emerald: #047857;
+            --cream: #FFF8E7;
+            --dark: #1a1a1a;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #FFF8E7 0%, #FEF3C7 50%, #FFF8E7 100%);
+            min-height: 100vh;
+        }
+        
+        .islamic-pattern {
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(212, 175, 55, 0.03) 35px, rgba(212, 175, 55, 0.03) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(4, 120, 87, 0.03) 35px, rgba(4, 120, 87, 0.03) 70px);
+        }
+        
+        .card-shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-shimmer::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .pulse-gold {
+            animation: pulse-gold 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(212, 175, 55, 0.6); }
+        }
+        
+        .bounce-in {
+            animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .celebration {
+            animation: celebrate 0.8s ease-out;
+        }
+        
+        @keyframes celebrate {
+            0% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.2) rotate(5deg); }
+            50% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.2) rotate(3deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        
+        .number-card {
+            transition: all 0.3s ease;
+        }
+        
+        .number-card:hover:not(.used) {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(212, 175, 55, 0.4);
+        }
+        
+        .number-card.used {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: var(--gold);
+            animation: confetti-fall 3s linear;
+            pointer-events: none;
+        }
+        
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // بنك الأسئلة الكامل - 60 سؤال
+        const QUESTION_BANK = [
+            {
+                question: "كم عدد سور القرآن الكريم؟",
+                options: ["110 سورة", "114 سورة", "120 سورة", "100 سورة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "ما هي أطول سورة في القرآن الكريم؟",
+                options: ["سورة الأنعام", "سورة الأعراف", "سورة البقرة", "سورة آل عمران"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "في أي عام هجري كانت غزوة بدر الكبرى؟",
+                options: ["السنة الأولى", "السنة الثانية", "السنة الثالثة", "السنة الرابعة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "كم عدد أركان الإسلام؟",
+                options: ["أربعة", "خمسة", "ستة", "سبعة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو أول من كتب بسم الله الرحمن الرحيم؟",
+                options: ["سيدنا آدم", "سيدنا نوح", "سيدنا إبراهيم", "النبي سليمان"],
+                correct: 3,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي تسمى قلب القرآن؟",
+                options: ["سورة الفاتحة", "سورة يس", "سورة الإخلاص", "سورة الملك"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "كم عدد أركان الإيمان؟",
+                options: ["أربعة", "خمسة", "ستة", "سبعة"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "من هو خاتم الأنبياء والمرسلين؟",
+                options: ["عيسى عليه السلام", "موسى عليه السلام", "محمد صلى الله عليه وسلم", "إبراهيم عليه السلام"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي أقصر سورة في القرآن الكريم؟",
+                options: ["سورة الإخلاص", "سورة الناس", "سورة الكوثر", "سورة الفلق"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "في أي شهر فرض الصيام على المسلمين؟",
+                options: ["شوال", "رجب", "شعبان", "رمضان"],
+                correct: 3,
+                points: 10
+            },
+            {
+                question: "كم عدد السجدات في القرآن الكريم؟",
+                options: ["13 سجدة", "14 سجدة", "15 سجدة", "16 سجدة"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "من هو الصحابي الملقب بأمين هذه الأمة؟",
+                options: ["عمر بن الخطاب", "أبو بكر الصديق", "أبو عبيدة بن الجراح", "علي بن أبي طالب"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هو اليوم الذي خلق الله فيه آدم عليه السلام؟",
+                options: ["يوم السبت", "يوم الأحد", "يوم الجمعة", "يوم الاثنين"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم عدد الأنبياء الذين ذكروا في القرآن؟",
+                options: ["20 نبياً", "25 نبياً", "30 نبياً", "35 نبياً"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هي أول امرأة آمنت برسول الله صلى الله عليه وسلم؟",
+                options: ["عائشة بنت أبي بكر", "فاطمة بنت محمد", "خديجة بنت خويلد", "حفصة بنت عمر"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي تعدل ثلث القرآن؟",
+                options: ["سورة الفاتحة", "سورة الإخلاص", "سورة الملك", "سورة الكهف"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "في أي غار نزل الوحي على النبي صلى الله عليه وسلم؟",
+                options: ["غار ثور", "غار حراء", "غار أحد", "غار تبوك"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو الصحابي الذي لقب بسيف الله المسلول؟",
+                options: ["علي بن أبي طالب", "عمر بن الخطاب", "خالد بن الوليد", "حمزة بن عبد المطلب"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم مرة ذكرت كلمة 'الجنة' في القرآن الكريم؟",
+                options: ["44 مرة", "66 مرة", "77 مرة", "88 مرة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو النبي الذي ابتلعه الحوت؟",
+                options: ["يونس عليه السلام", "نوح عليه السلام", "موسى عليه السلام", "هود عليه السلام"],
+                correct: 0,
+                points: 10
+            },
+            {
+                question: "كم عدد أجزاء القرآن الكريم؟",
+                options: ["25 جزءاً", "30 جزءاً", "35 جزءاً", "40 جزءاً"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "ما هي أول آية نزلت في القرآن الكريم؟",
+                options: ["بسم الله الرحمن الرحيم", "اقرأ باسم ربك الذي خلق", "الحمد لله رب العالمين", "قل هو الله أحد"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو الصحابي الملقب بالفاروق؟",
+                options: ["أبو بكر الصديق", "عمر بن الخطاب", "عثمان بن عفان", "علي بن أبي طالب"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "كم كان عمر النبي صلى الله عليه وسلم عند نزول الوحي؟",
+                options: ["35 سنة", "40 سنة", "45 سنة", "50 سنة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "ما هي الليلة التي نزل فيها القرآن الكريم؟",
+                options: ["ليلة النصف من شعبان", "ليلة القدر", "ليلة الإسراء والمعراج", "ليلة عرفة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو أول مؤذن في الإسلام؟",
+                options: ["بلال بن رباح", "عمر بن الخطاب", "علي بن أبي طالب", "عبد الله بن مسعود"],
+                correct: 0,
+                points: 10
+            },
+            {
+                question: "كم عدد الصلوات المفروضة في اليوم والليلة؟",
+                options: ["ثلاث صلوات", "أربع صلوات", "خمس صلوات", "ست صلوات"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي بدأت باسم فاكهة؟",
+                options: ["سورة البقرة", "سورة التين", "سورة النخل", "سورة الزيتون"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو النبي الذي كان يصنع الدروع؟",
+                options: ["داود عليه السلام", "سليمان عليه السلام", "إبراهيم عليه السلام", "نوح عليه السلام"],
+                correct: 0,
+                points: 10
+            },
+            {
+                question: "كم مرة ذكر اسم النبي محمد صلى الله عليه وسلم في القرآن؟",
+                options: ["مرتان", "ثلاث مرات", "أربع مرات", "خمس مرات"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي ذكرت فيها البسملة مرتين؟",
+                options: ["سورة الفاتحة", "سورة النمل", "سورة البقرة", "سورة يس"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو الصحابي الذي اهتز لموته عرش الرحمن؟",
+                options: ["حمزة بن عبد المطلب", "أبو بكر الصديق", "سعد بن معاذ", "عمر بن الخطاب"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي تسمى عروس القرآن؟",
+                options: ["سورة يوسف", "سورة مريم", "سورة الرحمن", "سورة الكهف"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم عدد أبواب الجنة؟",
+                options: ["سبعة أبواب", "ثمانية أبواب", "تسعة أبواب", "عشرة أبواب"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هي أم المؤمنين الملقبة بأم المساكين؟",
+                options: ["عائشة بنت أبي بكر", "زينب بنت خزيمة", "حفصة بنت عمر", "سودة بنت زمعة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "ما هو الشهر الذي حرم الله فيه القتال؟",
+                options: ["رمضان فقط", "الأشهر الحرم الأربعة", "ذو الحجة فقط", "محرم فقط"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو النبي الذي سخر الله له الريح؟",
+                options: ["موسى عليه السلام", "داود عليه السلام", "سليمان عليه السلام", "عيسى عليه السلام"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم عدد آيات سورة الفاتحة؟",
+                options: ["5 آيات", "6 آيات", "7 آيات", "8 آيات"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي نزلت في أهل الكهف؟",
+                options: ["سورة الكهف", "سورة البقرة", "سورة يوسف", "سورة مريم"],
+                correct: 0,
+                points: 10
+            },
+            {
+                question: "من هو الصحابي الذي لقب بذي النورين؟",
+                options: ["عمر بن الخطاب", "علي بن أبي طالب", "عثمان بن عفان", "أبو بكر الصديق"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم عدد أبواب النار؟",
+                options: ["خمسة أبواب", "ستة أبواب", "سبعة أبواب", "ثمانية أبواب"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي تسمى سنام القرآن؟",
+                options: ["سورة الفاتحة", "سورة البقرة", "سورة آل عمران", "سورة يس"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو النبي الذي ألقاه إخوته في البئر؟",
+                options: ["إسحاق عليه السلام", "يعقوب عليه السلام", "يوسف عليه السلام", "موسى عليه السلام"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم عدد ركعات صلاة الفجر الفريضة؟",
+                options: ["ركعة واحدة", "ركعتان", "ثلاث ركعات", "أربع ركعات"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي تحمي من عذاب القبر؟",
+                options: ["سورة الإخلاص", "سورة الملك", "سورة الواقعة", "سورة الكهف"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو الصحابي الملقب بأسد الله؟",
+                options: ["خالد بن الوليد", "سعد بن أبي وقاص", "حمزة بن عبد المطلب", "علي بن أبي طالب"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم سنة استمرت الدعوة في مكة قبل الهجرة؟",
+                options: ["10 سنوات", "13 سنة", "15 سنة", "20 سنة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "ما هو أول بيت وضع للناس على الأرض؟",
+                options: ["المسجد الأقصى", "المسجد النبوي", "الكعبة المشرفة", "مسجد قباء"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "من هو النبي الذي كلم الله تكليماً؟",
+                options: ["محمد صلى الله عليه وسلم", "موسى عليه السلام", "إبراهيم عليه السلام", "عيسى عليه السلام"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "كم عدد كلمات آية الكرسي؟",
+                options: ["40 كلمة", "50 كلمة", "60 كلمة", "70 كلمة"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي تقرأ في صلاة الجمعة؟",
+                options: ["سورة الإنسان والغاشية", "سورة الجمعة والمنافقون", "سورة الأعلى والغاشية", "سورة الكهف"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "من هو الصحابي الذي تستحي منه الملائكة؟",
+                options: ["أبو بكر الصديق", "عمر بن الخطاب", "عثمان بن عفان", "علي بن أبي طالب"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم مرة حج النبي صلى الله عليه وسلم؟",
+                options: ["مرة واحدة", "مرتين", "ثلاث مرات", "أربع مرات"],
+                correct: 0,
+                points: 10
+            },
+            {
+                question: "ما هي السورة التي تعدل قراءتها قراءة ربع القرآن؟",
+                options: ["سورة الإخلاص", "سورة الكافرون", "سورة الفاتحة", "سورة الناس"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "من هو خازن الجنة؟",
+                options: ["جبريل عليه السلام", "ميكائيل عليه السلام", "رضوان", "إسرافيل عليه السلام"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "كم عدد المعوذات في القرآن؟",
+                options: ["معوذة واحدة", "معوذتان", "ثلاث معوذات", "أربع معوذات"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هو أول مسجد بني في الإسلام؟",
+                options: ["المسجد الحرام", "المسجد النبوي", "مسجد قباء", "المسجد الأقصى"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "من هو خازن النار؟",
+                options: ["إبليس", "مالك", "هاروت", "ماروت"],
+                correct: 1,
+                points: 10
+            },
+            {
+                question: "كم عدد الأشهر الحرم؟",
+                options: ["شهران", "ثلاثة أشهر", "أربعة أشهر", "خمسة أشهر"],
+                correct: 2,
+                points: 10
+            },
+            {
+                question: "ما هي أعظم سورة في القرآن الكريم؟",
+                options: ["سورة البقرة", "سورة الفاتحة", "سورة الإخلاص", "سورة يس"],
+                correct: 1,
+                points: 10
+            }
+        ];
+        
+        function QuizApp() {
+            const [screen, setScreen] = useState('setup');
+            const [team1Name, setTeam1Name] = useState('');
+            const [team2Name, setTeam2Name] = useState('');
+            const [team1Score, setTeam1Score] = useState(0);
+            const [team2Score, setTeam2Score] = useState(0);
+            const [currentTeam, setCurrentTeam] = useState(1);
+            const [usedQuestions, setUsedQuestions] = useState([]);
+            const [selectedQuestion, setSelectedQuestion] = useState(null);
+            const [timeLeft, setTimeLeft] = useState(180);
+            const [isTimerRunning, setIsTimerRunning] = useState(false);
+            const [showAnswer, setShowAnswer] = useState(false);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [confirmedAnswer, setConfirmedAnswer] = useState(false);
+            const [gameQuestions, setGameQuestions] = useState([]);
+            const [bonusPosition, setBonusPosition] = useState(null);
+            const [isLoading, setIsLoading] = useState(true);
+            const timerRef = useRef(null);
+            
+            useEffect(() => {
+                loadData();
+            }, []);
+            
+            const loadData = () => {
+                try {
+                    // تحميل بنك الأسئلة من localStorage
+                    const savedBank = localStorage.getItem('question-bank');
+                    if (!savedBank) {
+                        localStorage.setItem('question-bank', JSON.stringify(QUESTION_BANK));
+                    }
+                    setIsLoading(false);
+                } catch (error) {
+                    console.log('LocalStorage initialization:', error);
+                    setIsLoading(false);
+                }
+            };
+            
+            const saveGameHistory = () => {
+                try {
+                    const gameData = {
+                        date: new Date().toISOString(),
+                        team1: { name: team1Name, score: team1Score },
+                        team2: { name: team2Name, score: team2Score },
+                        winner: team1Score > team2Score ? team1Name : team2Score > team1Score ? team2Name : 'تعادل'
+                    };
+                    
+                    const savedHistory = localStorage.getItem('game-history');
+                    let history = savedHistory ? JSON.parse(savedHistory) : [];
+                    history.unshift(gameData);
+                    history = history.slice(0, 10);
+                    
+                    localStorage.setItem('game-history', JSON.stringify(history));
+                } catch (error) {
+                    console.log('Error saving game history:', error);
+                }
+            };
+            
+            useEffect(() => {
+                if (isTimerRunning && timeLeft > 0) {
+                    timerRef.current = setTimeout(() => {
+                        setTimeLeft(timeLeft - 1);
+                    }, 1000);
+                } else if (timeLeft === 0 && isTimerRunning) {
+                    handleTimeout();
+                }
+                return () => clearTimeout(timerRef.current);
+            }, [timeLeft, isTimerRunning]);
+            
+            const handleTimeout = () => {
+                setIsTimerRunning(false);
+                setConfirmedAnswer(true);
+                setShowAnswer(true);
+            };
+            
+            const shuffleArray = (array) => {
+                const newArray = [...array];
+                for (let i = newArray.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+                }
+                return newArray;
+            };
+            
+            const startGame = () => {
+                if (!team1Name.trim() || !team2Name.trim()) {
+                    alert('الرجاء إدخال أسماء الفريقين');
+                    return;
+                }
+                
+                const shuffled = shuffleArray(QUESTION_BANK);
+                const selected = shuffled.slice(0, 19);
+                
+                const randomPos = Math.floor(Math.random() * 20) + 1;
+                setBonusPosition(randomPos);
+                
+                const bonusQuestion = {
+                    type: "bonus",
+                    question: "🎉 مبروك! 🎉",
+                    message: "فريقكم حصل على 20 نقطة إضافية!",
+                    points: 20
+                };
+                
+                const questions = [];
+                let normalQuestionIndex = 0;
+                
+                for (let i = 1; i <= 20; i++) {
+                    if (i === randomPos) {
+                        questions.push({ ...bonusQuestion, id: i });
+                    } else {
+                        questions.push({ ...selected[normalQuestionIndex], id: i });
+                        normalQuestionIndex++;
+                    }
+                }
+                
+                setGameQuestions(questions);
+                setScreen('game');
+            };
+            
+            const selectNumber = (num) => {
+                if (usedQuestions.includes(num)) return;
+                
+                const question = gameQuestions.find(q => q.id === num);
+                setSelectedQuestion(question);
+                setTimeLeft(180);
+                setShowAnswer(false);
+                setSelectedAnswer(null);
+                setConfirmedAnswer(false);
+                
+                if (question.type === 'bonus') {
+                    createConfetti();
+                    setTimeout(() => {
+                        if (currentTeam === 1) {
+                            setTeam1Score(team1Score + question.points);
+                        } else {
+                            setTeam2Score(team2Score + question.points);
+                        }
+                        setUsedQuestions([...usedQuestions, num]);
+                        setSelectedQuestion(null);
+                        setCurrentTeam(currentTeam === 1 ? 2 : 1);
+                        
+                        if (usedQuestions.length + 1 === 20) {
+                            setTimeout(() => {
+                                saveGameHistory();
+                                setScreen('end');
+                            }, 1000);
+                        }
+                    }, 3000);
+                } else {
+                    setIsTimerRunning(true);
+                }
+            };
+            
+            const selectAnswer = (index) => {
+                if (showAnswer || confirmedAnswer) return;
+                setSelectedAnswer(index);
+            };
+            
+            const confirmAnswer = () => {
+                if (selectedAnswer === null || confirmedAnswer) return;
+                
+                setConfirmedAnswer(true);
+                setShowAnswer(true);
+                setIsTimerRunning(false);
+                
+                const isCorrect = selectedAnswer === selectedQuestion.correct;
+                
+                if (isCorrect) {
+                    createConfetti();
+                    if (currentTeam === 1) {
+                        setTeam1Score(team1Score + selectedQuestion.points);
+                    } else {
+                        setTeam2Score(team2Score + selectedQuestion.points);
+                    }
+                }
+            };
+            
+            const backToGrid = () => {
+                setUsedQuestions([...usedQuestions, selectedQuestion.id]);
+                setSelectedQuestion(null);
+                setSelectedAnswer(null);
+                setConfirmedAnswer(false);
+                setCurrentTeam(currentTeam === 1 ? 2 : 1);
+                
+                if (usedQuestions.length + 1 === 20) {
+                    setTimeout(() => {
+                        saveGameHistory();
+                        setScreen('end');
+                    }, 500);
+                }
+            };
+            
+            const createConfetti = () => {
+                for (let i = 0; i < 50; i++) {
+                    setTimeout(() => {
+                        const confetti = document.createElement('div');
+                        confetti.className = 'confetti';
+                        confetti.style.left = Math.random() * 100 + '%';
+                        confetti.style.background = ['#D4AF37', '#047857', '#F59E0B', '#EC4899'][Math.floor(Math.random() * 4)];
+                        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                        document.body.appendChild(confetti);
+                        setTimeout(() => confetti.remove(), 3000);
+                    }, i * 30);
+                }
+            };
+            
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            const getTimerColor = () => {
+                if (timeLeft > 120) return '#047857';
+                if (timeLeft > 60) return '#F59E0B';
+                return '#DC2626';
+            };
+            
+            const resetGame = () => {
+                setScreen('setup');
+                setTeam1Name('');
+                setTeam2Name('');
+                setTeam1Score(0);
+                setTeam2Score(0);
+                setCurrentTeam(1);
+                setUsedQuestions([]);
+                setSelectedQuestion(null);
+                setGameQuestions([]);
+                setBonusPosition(null);
+            };
+            
+            if (isLoading) {
+                return (
+                    <div className="min-h-screen islamic-pattern flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="text-6xl mb-4">📖</div>
+                            <p className="text-2xl text-gray-700">جاري التحميل...</p>
+                        </div>
+                    </div>
+                );
+            }
+            
+            if (screen === 'setup') {
+                return (
+                    <div className="min-h-screen islamic-pattern flex items-center justify-center p-4">
+                        <div className="text-center bounce-in max-w-2xl w-full">
+                            <div className="mb-8">
+                                <h1 className="title-font text-7xl font-bold mb-4 bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-600 bg-clip-text text-transparent">
+                                    مسابقة القرآن والسنة
+                                </h1>
+                                <div className="w-32 h-1 bg-gradient-to-r from-transparent via-yellow-600 to-transparent mx-auto"></div>
+                            </div>
+                            
+                            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border-4 border-yellow-600/20">
+                                <h2 className="text-3xl font-bold mb-8 text-gray-800">أدخل أسماء الفريقين</h2>
+                                
+                                <div className="space-y-6 mb-8">
+                                    <div>
+                                        <label className="block text-right text-xl font-semibold mb-3 text-emerald-700">
+                                            اسم الفريق الأول
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={team1Name}
+                                            onChange={(e) => setTeam1Name(e.target.value)}
+                                            className="w-full p-4 rounded-xl border-2 border-emerald-200 focus:border-emerald-500 focus:outline-none text-xl text-right"
+                                            placeholder="مثال: فريق النور"
+                                            maxLength={20}
+                                        />
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-right text-xl font-semibold mb-3 text-blue-700">
+                                            اسم الفريق الثاني
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={team2Name}
+                                            onChange={(e) => setTeam2Name(e.target.value)}
+                                            className="w-full p-4 rounded-xl border-2 border-blue-200 focus:border-blue-500 focus:outline-none text-xl text-right"
+                                            placeholder="مثال: فريق الهدى"
+                                            maxLength={20}
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <button
+                                    onClick={() => setScreen('start')}
+                                    disabled={!team1Name.trim() || !team2Name.trim()}
+                                    className={`w-full py-5 rounded-2xl text-2xl font-bold transition-all shadow-xl ${
+                                        team1Name.trim() && team2Name.trim()
+                                            ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800 transform hover:scale-105 pulse-gold'
+                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                                >
+                                    التالي ←
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            if (screen === 'start') {
+                return (
+                    <div className="min-h-screen islamic-pattern flex items-center justify-center p-4">
+                        <div className="text-center bounce-in">
+                            <div className="mb-8">
+                                <h1 className="title-font text-7xl font-bold mb-4 bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-600 bg-clip-text text-transparent">
+                                    مسابقة القرآن والسنة
+                                </h1>
+                                <div className="w-32 h-1 bg-gradient-to-r from-transparent via-yellow-600 to-transparent mx-auto"></div>
+                            </div>
+                            
+                            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl max-w-2xl mx-auto border-4 border-yellow-600/20">
+                                <div className="mb-8">
+                                    <h2 className="text-3xl font-bold mb-4 text-gray-800">المتسابقون اليوم</h2>
+                                    <div className="flex justify-center gap-6 mb-6">
+                                        <div className="bg-gradient-to-r from-emerald-100 to-emerald-200 px-8 py-4 rounded-2xl border-2 border-emerald-400">
+                                            <p className="text-2xl font-bold text-emerald-800">{team1Name}</p>
+                                        </div>
+                                        <div className="flex items-center text-3xl font-bold text-gray-500">VS</div>
+                                        <div className="bg-gradient-to-r from-blue-100 to-blue-200 px-8 py-4 rounded-2xl border-2 border-blue-400">
+                                            <p className="text-2xl font-bold text-blue-800">{team2Name}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <p className="text-2xl text-gray-700 mb-8 leading-relaxed">
+                                    مسابقة تفاعلية تتضمن 20 سؤالاً في القرآن الكريم والسنة النبوية
+                                </p>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border-2 border-emerald-200">
+                                        <div className="text-4xl mb-2">⏱️</div>
+                                        <p className="text-emerald-800 font-semibold">3 دقائق لكل سؤال</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border-2 border-amber-200">
+                                        <div className="text-4xl mb-2">🎯</div>
+                                        <p className="text-amber-800 font-semibold">20 سؤال متنوع</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-2xl border-2 border-pink-200">
+                                        <div className="text-4xl mb-2">🎁</div>
+                                        <p className="text-pink-800 font-semibold">مفاجأة مبروك مخفية!</p>
+                                    </div>
+                                </div>
+                                
+                                <button
+                                    onClick={startGame}
+                                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-12 py-5 rounded-2xl text-2xl font-bold hover:from-emerald-700 hover:to-emerald-800 transform hover:scale-105 transition-all shadow-2xl pulse-gold"
+                                >
+                                    ابدأ المسابقة ✨
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            if (screen === 'end') {
+                const winner = team1Score > team2Score ? 1 : team2Score > team1Score ? 2 : 0;
+                
+                return (
+                    <div className="min-h-screen islamic-pattern flex items-center justify-center p-4">
+                        <div className="text-center celebration">
+                            <div className="mb-8">
+                                <h1 className="title-font text-6xl font-bold mb-4 bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-600 bg-clip-text text-transparent">
+                                    انتهت المسابقة! 🎉
+                                </h1>
+                            </div>
+                            
+                            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl max-w-3xl mx-auto border-4 border-yellow-600/20">
+                                {winner === 0 ? (
+                                    <div className="mb-8">
+                                        <div className="text-6xl mb-4">🤝</div>
+                                        <h2 className="text-4xl font-bold text-gray-800 mb-4">تعادل!</h2>
+                                        <p className="text-2xl text-gray-600">كلا الفريقين أبدعا!</p>
+                                    </div>
+                                ) : (
+                                    <div className="mb-8">
+                                        <div className="text-6xl mb-4">🏆</div>
+                                        <h2 className="text-4xl font-bold text-gray-800 mb-4">
+                                            الفائز: {winner === 1 ? team1Name : team2Name}
+                                        </h2>
+                                        <p className="text-2xl text-gray-600">مبروك! 🎊</p>
+                                    </div>
+                                )}
+                                
+                                <div className="grid grid-cols-2 gap-6 mb-8">
+                                    <div className={`p-8 rounded-2xl ${winner === 1 ? 'bg-gradient-to-br from-yellow-100 to-yellow-200 border-4 border-yellow-400' : 'bg-gray-100 border-2 border-gray-300'}`}>
+                                        <h3 className="text-2xl font-bold mb-2">{team1Name}</h3>
+                                        <p className="text-5xl font-bold text-emerald-700">{team1Score}</p>
+                                        <p className="text-gray-600 mt-2">نقطة</p>
+                                    </div>
+                                    <div className={`p-8 rounded-2xl ${winner === 2 ? 'bg-gradient-to-br from-yellow-100 to-yellow-200 border-4 border-yellow-400' : 'bg-gray-100 border-2 border-gray-300'}`}>
+                                        <h3 className="text-2xl font-bold mb-2">{team2Name}</h3>
+                                        <p className="text-5xl font-bold text-blue-700">{team2Score}</p>
+                                        <p className="text-gray-600 mt-2">نقطة</p>
+                                    </div>
+                                </div>
+                                
+                                <button
+                                    onClick={resetGame}
+                                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-10 py-4 rounded-2xl text-xl font-bold hover:from-emerald-700 hover:to-emerald-800 transform hover:scale-105 transition-all shadow-xl"
+                                >
+                                    مسابقة جديدة 🔄
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="min-h-screen islamic-pattern p-4">
+                    <div className="max-w-7xl mx-auto mb-6">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border-2 border-yellow-600/20">
+                            <div className="flex justify-between items-center">
+                                <div className={`flex-1 text-center p-4 rounded-2xl transition-all ${currentTeam === 1 ? 'bg-gradient-to-r from-emerald-100 to-emerald-200 border-4 border-emerald-500 scale-105' : 'bg-gray-100'}`}>
+                                    <h3 className="text-xl font-bold mb-2">{team1Name}</h3>
+                                    <p className="text-4xl font-bold text-emerald-700">{team1Score}</p>
+                                </div>
+                                
+                                <div className="px-8">
+                                    <div className="text-center">
+                                        <p className="text-sm text-gray-600 mb-1">دور</p>
+                                        <div className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-500 bg-clip-text text-transparent">
+                                            {currentTeam === 1 ? team1Name : team2Name}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className={`flex-1 text-center p-4 rounded-2xl transition-all ${currentTeam === 2 ? 'bg-gradient-to-r from-blue-100 to-blue-200 border-4 border-blue-500 scale-105' : 'bg-gray-100'}`}>
+                                    <h3 className="text-xl font-bold mb-2">{team2Name}</h3>
+                                    <p className="text-4xl font-bold text-blue-700">{team2Score}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {!selectedQuestion ? (
+                        <div className="max-w-6xl mx-auto">
+                            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-xl">
+                                <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">
+                                    اختر رقم السؤال
+                                </h2>
+                                <div className="grid grid-cols-5 gap-4">
+                                    {[...Array(20)].map((_, i) => {
+                                        const num = i + 1;
+                                        const isUsed = usedQuestions.includes(num);
+                                        
+                                        return (
+                                            <button
+                                                key={num}
+                                                onClick={() => selectNumber(num)}
+                                                disabled={isUsed}
+                                                className={`number-card ${isUsed ? 'used' : ''} bg-gradient-to-br from-yellow-400 to-amber-600 text-white text-4xl font-bold py-8 rounded-2xl shadow-lg hover:shadow-2xl card-shimmer border-4 border-white/50`}
+                                            >
+                                                {num}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="max-w-4xl mx-auto slide-up">
+                            {selectedQuestion.type === 'bonus' ? (
+                                <div className="bg-gradient-to-br from-pink-100 to-pink-200 rounded-3xl p-12 shadow-2xl text-center border-4 border-pink-400 celebration">
+                                    <div className="text-8xl mb-6">🎉</div>
+                                    <h2 className="text-5xl font-bold mb-4 text-pink-900">{selectedQuestion.question}</h2>
+                                    <p className="text-3xl text-pink-800 mb-6">{selectedQuestion.message}</p>
+                                    <div className="text-6xl font-bold text-pink-600">+{selectedQuestion.points} نقطة</div>
+                                </div>
+                            ) : (
+                                <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border-2 border-yellow-600/20">
+                                    <div className="flex justify-center mb-8">
+                                        <div className="relative">
+                                            <svg width="120" height="120" className="transform -rotate-90">
+                                                <circle
+                                                    cx="60"
+                                                    cy="60"
+                                                    r="54"
+                                                    fill="none"
+                                                    stroke="#E5E7EB"
+                                                    strokeWidth="8"
+                                                />
+                                                <circle
+                                                    cx="60"
+                                                    cy="60"
+                                                    r="54"
+                                                    fill="none"
+                                                    stroke={getTimerColor()}
+                                                    strokeWidth="8"
+                                                    strokeDasharray="339.292"
+                                                    strokeDashoffset={339.292 * (1 - timeLeft / 180)}
+                                                    className="transition-all duration-1000"
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <span className="text-2xl font-bold" style={{ color: getTimerColor() }}>
+                                                    {formatTime(timeLeft)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <h2 className="text-3xl font-bold text-center mb-8 text-gray-800 leading-relaxed">
+                                        {selectedQuestion.question}
+                                    </h2>
+                                    
+                                    <div className="space-y-4 mb-8">
+                                        {selectedQuestion.options.map((option, index) => {
+                                            const isCorrect = index === selectedQuestion.correct;
+                                            const isSelected = selectedAnswer === index;
+                                            
+                                            let bgColor = 'bg-gray-100 hover:bg-gray-200';
+                                            if (showAnswer) {
+                                                if (isCorrect) {
+                                                    bgColor = 'bg-gradient-to-r from-emerald-400 to-emerald-500 text-white celebration';
+                                                } else if (isSelected && !isCorrect) {
+                                                    bgColor = 'bg-gradient-to-r from-red-400 to-red-500 text-white';
+                                                }
+                                            } else if (isSelected) {
+                                                bgColor = 'bg-gradient-to-r from-blue-400 to-blue-500 text-white';
+                                            }
+                                            
+                                            return (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => selectAnswer(index)}
+                                                    disabled={confirmedAnswer}
+                                                    className={`w-full p-6 rounded-2xl text-right text-xl font-semibold transition-all transform hover:scale-102 ${bgColor} border-2 ${showAnswer && isCorrect ? 'border-emerald-600' : 'border-transparent'} shadow-lg`}
+                                                >
+                                                    <span className="ml-3">{['أ.', 'ب.', 'ج.', 'د.'][index]}</span>
+                                                    {option}
+                                                    {showAnswer && isCorrect && <span className="float-left text-2xl">✓</span>}
+                                                    {showAnswer && isSelected && !isCorrect && <span className="float-left text-2xl">✗</span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    <div className="text-center">
+                                        {!confirmedAnswer && selectedAnswer !== null && (
+                                            <button
+                                                onClick={confirmAnswer}
+                                                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-10 py-4 rounded-2xl text-xl font-bold hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all shadow-xl bounce-in"
+                                            >
+                                                تأكيد الإجابة ✓
+                                            </button>
+                                        )}
+                                        
+                                        {showAnswer && (
+                                            <button
+                                                onClick={backToGrid}
+                                                className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-10 py-4 rounded-2xl text-xl font-bold hover:from-emerald-700 hover:to-emerald-800 transform hover:scale-105 transition-all shadow-xl bounce-in"
+                                            >
+                                                رجوع للأسئلة ←
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<QuizApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
